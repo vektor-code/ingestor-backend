@@ -1,0 +1,16 @@
+# Binaries and templates
+ingestor
+ingestor-backend
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# System files
+.DS_Store
+.idea
+.vscode
