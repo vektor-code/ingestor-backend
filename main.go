@@ -44,12 +44,12 @@ type Ingestor struct {
 
 func main() {
 	var (
-		kafkaBrokers  = flag.String("kafka-brokers", "127.0.0.1:9092", "Kafka bootstrap brokers comma-separated")
-		kafkaTopic    = flag.String("kafka-topic", "kubetrace-spans", "Kafka topic to consume spans from")
-		kafkaGroup    = flag.String("kafka-group", "kubetrace-ingestor-group", "Kafka consumer group ID")
-		clickhouseURL = flag.String("clickhouse-url", "http://127.0.0.1:8123", "ClickHouse HTTP API URL")
-		batchSize     = flag.Int("batch-size", 8192, "Bulk batch insert size to ClickHouse")
-		flushWindowS  = flag.Int("flush-window-seconds", 2, "Flush interval window")
+		kafkaBrokers  = flag.String("kafka-brokers", getEnv("KAFKA_BROKERS", "127.0.0.1:9092"), "Kafka bootstrap brokers comma-separated")
+		kafkaTopic    = flag.String("kafka-topic", getEnv("KAFKA_TOPIC", "kubetrace-spans"), "Kafka topic to consume spans from")
+		kafkaGroup    = flag.String("kafka-group", getEnv("KAFKA_GROUP", "kubetrace-ingestor-group"), "Kafka consumer group ID")
+		clickhouseURL = flag.String("clickhouse-url", getEnv("CLICKHOUSE_URL", "http://127.0.0.1:8123"), "ClickHouse HTTP API URL")
+		batchSize     = flag.Int("batch-size", getEnvInt("BATCH_SIZE", 8192), "Bulk batch insert size to ClickHouse")
+		flushWindowS  = flag.Int("flush-window-seconds", getEnvInt("FLUSH_WINDOW_SECONDS", 2), "Flush interval window")
 	)
 	flag.Parse()
 
@@ -312,3 +312,23 @@ func (ing *Ingestor) flush(batch []ClickHouseSpan) {
 		log.Printf("[ingestor] flushed %d spans to ClickHouse.", len(batch))
 	}
 }
+
+func getEnv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+func getEnvInt(key string, def int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	var n int
+	if _, err := fmt.Sscanf(v, "%d", &n); err == nil {
+		return n
+	}
+	return def
+}
+
