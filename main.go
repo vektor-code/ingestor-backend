@@ -109,38 +109,43 @@ func main() {
 }
 
 func (ing *Ingestor) initDatabaseSchema() error {
-	query := `
-	CREATE DATABASE IF NOT EXISTS kubetrace;
-	CREATE TABLE IF NOT EXISTS kubetrace.spans (
-		timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, LZ4),
-		trace_id String CODEC(ZSTD(1)),
-		span_id String CODEC(ZSTD(1)),
-		parent_span_id String CODEC(ZSTD(1)),
-		service_name LowCardinality(String) CODEC(ZSTD(1)),
-		operation_name LowCardinality(String) CODEC(ZSTD(1)),
-		duration_ns Int64 CODEC(T64, LZ4),
-		status_code LowCardinality(String) CODEC(ZSTD(1)),
-		status_message String CODEC(ZSTD(1)),
-		tags Map(String, String) CODEC(ZSTD(1))
-	) ENGINE = ReplacingMergeTree()
-	PARTITION BY toYYYYMMDD(timestamp)
-	ORDER BY (service_name, operation_name, timestamp, trace_id);`
+	queries := []string{
+		"CREATE DATABASE IF NOT EXISTS kubetrace;",
+		`CREATE TABLE IF NOT EXISTS kubetrace.spans (
+			timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, LZ4),
+			trace_id String CODEC(ZSTD(1)),
+			span_id String CODEC(ZSTD(1)),
+			parent_span_id String CODEC(ZSTD(1)),
+			service_name LowCardinality(String) CODEC(ZSTD(1)),
+			operation_name LowCardinality(String) CODEC(ZSTD(1)),
+			duration_ns Int64 CODEC(T64, LZ4),
+			status_code LowCardinality(String) CODEC(ZSTD(1)),
+			status_message String CODEC(ZSTD(1)),
+			tags Map(String, String) CODEC(ZSTD(1))
+		) ENGINE = ReplacingMergeTree()
+		PARTITION BY toYYYYMMDD(timestamp)
+		ORDER BY (service_name, operation_name, timestamp, trace_id);`,
+	}
 
-	req, err := http.NewRequest("POST", ing.chURL, bytes.NewBufferString(query))
-	if err != nil {
-		return err
+	for i, q := range queries {
+		req, err := http.NewRequest("POST", ing.chURL, bytes.NewBufferString(q))
+		if err != nil {
+			return fmt.Errorf("init database request %d: %w", i+1, err)
+		}
+		resp, err := ing.chClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("init database execute %d: %w", i+1, err)
+		}
+		
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			return fmt.Errorf("clickhouse error %d on query %d: %s", resp.StatusCode, i+1, string(body))
+		}
+		resp.Body.Close()
 	}
-	resp, err := ing.chClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("clickhouse error %d: %s", resp.StatusCode, string(body))
-	}
-	log.Println("ClickHouse table schema verified/created.")
+	log.Println("ClickHouse database and table verified/created.")
 	return nil
 }
 
