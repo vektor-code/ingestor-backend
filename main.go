@@ -132,6 +132,10 @@ func (ing *Ingestor) initDatabaseSchema() error {
 		if err != nil {
 			return fmt.Errorf("init database request %d: %w", i+1, err)
 		}
+		if req.URL.User != nil {
+			pass, _ := req.URL.User.Password()
+			req.SetBasicAuth(req.URL.User.Username(), pass)
+		}
 		resp, err := ing.chClient.Do(req)
 		if err != nil {
 			return fmt.Errorf("init database execute %d: %w", i+1, err)
@@ -300,6 +304,10 @@ func (ing *Ingestor) flush(batch []ClickHouseSpan) {
 	if err != nil {
 		log.Printf("[ingestor/error] init clickhouse write: %v", err)
 		return
+	}
+	if req.URL.User != nil {
+		pass, _ := req.URL.User.Password()
+		req.SetBasicAuth(req.URL.User.Username(), pass)
 	}
 	req.Header.Set("Content-Type", "application/x-ndjson")
 
