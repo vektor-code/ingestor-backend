@@ -1,6 +1,6 @@
 # Binaries and templates
-ingestor
-ingestor-backend
+/ingestor
+/ingestor-backend
 *.exe
 *.exe~
 *.dll

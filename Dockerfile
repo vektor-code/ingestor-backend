@@ -11,7 +11,7 @@ RUN go mod download
 COPY . .
 
 # Build statically linked binary with symbols intact for eBPF auto-instrumentation
-RUN CGO_ENABLED=0 GOOS=linux go build -o ingestor .
+RUN CGO_ENABLED=0 GOOS=linux go build -o ingestor ./cmd/ingestor-backend
 
 # --- Stage 2: Final image ---
 FROM alpine:3.19
