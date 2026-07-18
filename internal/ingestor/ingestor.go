@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/kubetrace/ingestor-backend/internal/clickhouse"
-	"github.com/kubetrace/ingestor-backend/internal/model"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -19,13 +18,13 @@ func New(cfg Config) *Ingestor {
 	})
 
 	return &Ingestor{
-		kafkaReader: reader,
-		clickhouse:  clickhouse.New(cfg.ClickHouseURL),
-		hotHours:    cfg.ClickHouseHotHours,
-		ttlHours:    cfg.ClickHouseTTLHours,
-		batchSize:   cfg.BatchSize,
-		flushWindow: cfg.FlushWindow,
-		queue:       make(chan model.ClickHouseSpan, cfg.BatchSize*8),
+		kafkaReader:  reader,
+		clickhouse:   clickhouse.New(cfg.ClickHouseURL),
+		hotHours:     cfg.ClickHouseHotHours,
+		ttlHours:     cfg.ClickHouseTTLHours,
+		batchSize:    cfg.BatchSize,
+		flushWindow:  cfg.FlushWindow,
+		writeRetries: cfg.WriteRetries,
 	}
 }
 

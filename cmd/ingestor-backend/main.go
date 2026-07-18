@@ -25,7 +25,6 @@ func main() {
 		log.Fatalf("database schema init failed: %v", err)
 	}
 
-	go service.RunBatcher(ctx)
 	go service.ConsumeLoop(ctx)
 
 	sigChan := make(chan os.Signal, 1)

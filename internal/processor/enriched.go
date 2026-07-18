@@ -25,6 +25,7 @@ func ProcessEnriched(spans []model.EnrichedSpan) []model.ClickHouseSpan {
 		if tags == nil {
 			tags = map[string]string{}
 		}
+		enrichTelemetryTags(tags, sp.Name)
 
 		out = append(out, model.ClickHouseSpan{
 			Timestamp:     sp.StartTime.UTC().Format("2006-01-02 15:04:05.999999"),

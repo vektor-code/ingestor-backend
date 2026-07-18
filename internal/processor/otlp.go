@@ -32,7 +32,12 @@ func ProcessOTLP(req *colpb.ExportTraceServiceRequest) []model.ClickHouseSpan {
 		for _, ss := range rs.ScopeSpans {
 			for _, sp := range ss.Spans {
 				tags := mergeSpanTags(attrs, sp.Attributes)
+				enrichTelemetryTags(tags, sp.Name)
 				startTime := time.Unix(0, int64(sp.StartTimeUnixNano)).UTC()
+				statusCode := otlpStatusCode(sp.Status)
+				if statusCode != "ERROR" && spanLooksErrored(tags, sp.Events) {
+					statusCode = "ERROR"
+				}
 
 				out = append(out, model.ClickHouseSpan{
 					Timestamp:     startTime.Format("2006-01-02 15:04:05.999999"),
@@ -42,7 +47,7 @@ func ProcessOTLP(req *colpb.ExportTraceServiceRequest) []model.ClickHouseSpan {
 					ServiceName:   serviceName,
 					OperationName: sp.Name,
 					DurationNS:    int64(sp.EndTimeUnixNano - sp.StartTimeUnixNano),
-					StatusCode:    otlpStatusCode(sp.Status),
+					StatusCode:    statusCode,
 					StatusMessage: sp.Status.GetMessage(),
 					Tags:          tags,
 					Namespace:     tags["k8s.namespace.name"],

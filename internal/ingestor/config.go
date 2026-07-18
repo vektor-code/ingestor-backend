@@ -18,6 +18,7 @@ type Config struct {
 	ClickHouseTTLHours int
 	BatchSize          int
 	FlushWindow        time.Duration
+	WriteRetries       int
 }
 
 func ParseConfig() Config {
@@ -27,7 +28,18 @@ func ParseConfig() Config {
 	clickhouseURL := flag.String("clickhouse-url", getEnv("CLICKHOUSE_URL", "http://127.0.0.1:8123"), "ClickHouse HTTP API URL")
 	batchSize := flag.Int("batch-size", getEnvInt("BATCH_SIZE", 8192), "Bulk batch insert size to ClickHouse")
 	flushWindowS := flag.Int("flush-window-seconds", getEnvInt("FLUSH_WINDOW_SECONDS", 2), "Flush interval window")
+	writeRetries := flag.Int("write-retries", getEnvInt("WRITE_RETRIES", 0), "ClickHouse write retries per batch before giving up; 0 retries forever")
 	flag.Parse()
+
+	if *batchSize <= 0 {
+		*batchSize = 8192
+	}
+	if *flushWindowS <= 0 {
+		*flushWindowS = 2
+	}
+	if *writeRetries < 0 {
+		*writeRetries = 0
+	}
 
 	return Config{
 		KafkaBrokers:       parseBrokers(*kafkaBrokers),
@@ -38,6 +50,7 @@ func ParseConfig() Config {
 		ClickHouseTTLHours: getEnvInt("CLICKHOUSE_TTL_HOURS", 0),
 		BatchSize:          *batchSize,
 		FlushWindow:        time.Duration(*flushWindowS) * time.Second,
+		WriteRetries:       *writeRetries,
 	}
 }
 
